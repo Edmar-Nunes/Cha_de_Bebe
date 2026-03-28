@@ -5,7 +5,7 @@
 
 // ── Configuração Supabase ────────────────────────────────────────────
 const SUPABASE_URL     = 'https://gtpdkeyjljyepxtxqwki.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0cGRrZXlqbGp5ZXB4dHhxd2tpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDcyMDA4MSwiZXhwIjoyMDkwMjk2MDgxfQ.ESOHqPxtzRjchtv1S4SyKBfCImI8-e0IL9MciOC0_nU';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0cGRrZXlqbGp5ZXB4dHhxd2tpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MjAwODEsImV4cCI6MjA5MDI5NjA4MX0.l6dS-MKnturqyPxbjcT5KAPsKifSAFxBZmzXCOAlogI';
 
 // ── Estado global ────────────────────────────────────────────────────
 let sb            = null;   // cliente Supabase
