@@ -4,8 +4,8 @@
 // ===================================================================
 
 // ── Configuração Supabase ────────────────────────────────────────────
-const SUPABASE_URL     = 'https://ddeuqqykexbflgtluntc.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkZXVxcXlrZXhiZmxndGx1bnRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3Mjk4NzYsImV4cCI6MjA5MDMwNTg3Nn0.-X06QKcMWpve1Ndqg6s2YjyCjHQJ4oY0qUTXKFgLCfk';
+const SUPABASE_URL     = 'https://posfdhdawklandpwjlty.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvc2ZkaGRhd2tsYW5kcHdqbHR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MzI5MzYsImV4cCI6MjA5MDMwODkzNn0.CWjDCkY25NPUDy_kFlAxVO3O0xLBx-OPogRQmyeyGz8';
 
 // ── Estado global ────────────────────────────────────────────────────
 let sb            = null;   // cliente Supabase
