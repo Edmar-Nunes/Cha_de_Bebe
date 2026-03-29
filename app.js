@@ -2,7 +2,7 @@
 // CHÁ DE BEBÊ — app.js (VERSÃO CORRIGIDA)
 // ===================================================
 
-const SB_URL = 'https://posfdhdawklandpwjlty.supabase.co';
+const SB_URL = 'https://ftgxussaxoewwtowetgi.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvc2ZkaGRhd2tsYW5kcHdqbHR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MzI5MzYsImV4cCI6MjA5MDMwODkzNn0.CWjDCkY25NPUDy_kFlAxVO3O0xLBx-OPogRQmyeyGz8';
 
 // ── State ────────────────────────────────────────────
