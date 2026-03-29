@@ -1,18 +1,17 @@
 // ===================================================
-// CHÁ DE BEBÊ — app.js
-// Supabase integration with correct RLS + JWT auth
+// CHÁ DE BEBÊ — app.js (VERSÃO CORRIGIDA)
 // ===================================================
 
 const SB_URL = 'https://posfdhdawklandpwjlty.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvc2ZkaGRhd2tsYW5kcHdqbHR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MzI5MzYsImV4cCI6MjA5MDMwODkzNn0.CWjDCkY25NPUDy_kFlAxVO3O0xLBx-OPogRQmyeyGz8';
 
 // ── State ────────────────────────────────────────────
-let sb           = null;
-let me           = null;   // { ...supabase user, perfil: {...} }
-let gifts        = [];
-let myChoice     = null;
-let cfg          = {};
-let commCache    = {};
+let sb = null;
+let me = null;
+let gifts = [];
+let myChoice = null;
+let cfg = {};
+let commCache = {};
 
 let adm = { gifts: [], choices: [], users: [], cfg: {} };
 
@@ -42,7 +41,9 @@ let adm = { gifts: [], choices: [], users: [], cfg: {} };
     } else if (event === 'SIGNED_OUT') {
       me = null;
       commCache = {};
-      gifts = []; myChoice = null; cfg = {};
+      gifts = [];
+      myChoice = null;
+      cfg = {};
       renderLogin();
     }
   });
@@ -53,13 +54,14 @@ function route() {
   else renderApp();
 }
 
-window.addEventListener('hashchange', () => { if (me) route(); });
+window.addEventListener('hashchange', () => {
+  if (me) route();
+});
 
 // ===================================================
 // AUTH HELPERS
 // ===================================================
 
-// isAdmin reads from JWT user_metadata — no DB query, no RLS recursion
 function isAdmin() {
   return me?.user_metadata?.tipo === 'admin';
 }
@@ -93,16 +95,19 @@ async function doSignup(nome, email, telefone, password) {
 
 async function doLogout() {
   await sb.auth.signOut();
-  me = null; commCache = {};
-  gifts = []; myChoice = null; cfg = {};
+  me = null;
+  commCache = {};
+  gifts = [];
+  myChoice = null;
+  cfg = {};
   renderLogin();
 }
 
 function translateError(msg) {
   const map = {
-    'Invalid login credentials':             'E-mail ou senha incorretos.',
-    'Email not confirmed':                   'Confirme seu e-mail antes de entrar.',
-    'User already registered':               'Este e-mail já está cadastrado.',
+    'Invalid login credentials': 'E-mail ou senha incorretos.',
+    'Email not confirmed': 'Confirme seu e-mail antes de entrar.',
+    'User already registered': 'Este e-mail já está cadastrado.',
     'Password should be at least 6 characters': 'A senha deve ter pelo menos 6 caracteres.',
     'Unable to validate email address: invalid format': 'Formato de e-mail inválido.',
   };
@@ -141,11 +146,10 @@ function renderLogin() {
           <div class="login-box-sub">Entre na sua conta ou crie uma nova</div>
 
           <div class="tab-row">
-            <button class="tab-btn active" id="tabBtnLogin"   onclick="switchTab('login')">Entrar</button>
-            <button class="tab-btn"        id="tabBtnSignup"  onclick="switchTab('signup')">Criar conta</button>
+            <button class="tab-btn active" id="tabBtnLogin">Entrar</button>
+            <button class="tab-btn" id="tabBtnSignup">Criar conta</button>
           </div>
 
-          <!-- Login -->
           <div class="tab-panel active" id="panelLogin">
             <div class="alert alert-error" id="loginErr"></div>
             <div class="field">
@@ -155,17 +159,15 @@ function renderLogin() {
             <div class="field">
               <label>Senha</label>
               <div class="pass-wrap">
-                <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"
-                  onkeydown="if(event.key==='Enter') onLogin()">
+                <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
                 <button type="button" class="pass-toggle" onclick="togglePass('loginPass',this)">👁</button>
               </div>
             </div>
-            <button class="btn btn-primary btn-full" id="btnLogin" onclick="onLogin()">Entrar</button>
+            <button class="btn btn-primary btn-full" id="btnLogin">Entrar</button>
           </div>
 
-          <!-- Signup -->
           <div class="tab-panel" id="panelSignup">
-            <div class="alert alert-error"   id="signupErr"></div>
+            <div class="alert alert-error" id="signupErr"></div>
             <div class="alert alert-success" id="signupOk"></div>
             <div class="field">
               <label>Nome completo</label>
@@ -188,69 +190,112 @@ function renderLogin() {
             </div>
             <div class="field">
               <label>Confirmar senha</label>
-              <input type="password" id="signupConf" placeholder="Repita a senha"
-                onkeydown="if(event.key==='Enter') onSignup()">
+              <input type="password" id="signupConf" placeholder="Repita a senha">
             </div>
-            <button class="btn btn-primary btn-full" id="btnSignup" onclick="onSignup()">Criar conta</button>
+            <button class="btn btn-primary btn-full" id="btnSignup">Criar conta</button>
           </div>
-
         </div>
       </div>
     </div>`;
 
-  // Load config for branding
+  // Bind events
+  document.getElementById('tabBtnLogin').onclick = () => switchTab('login');
+  document.getElementById('tabBtnSignup').onclick = () => switchTab('signup');
+  document.getElementById('btnLogin').onclick = onLogin;
+  document.getElementById('btnSignup').onclick = onSignup;
+  
+  document.getElementById('loginPass').onkeydown = (e) => { if (e.key === 'Enter') onLogin(); };
+  document.getElementById('signupConf').onkeydown = (e) => { if (e.key === 'Enter') onSignup(); };
+
+  // Load config
   sb.from('configuracoes').select('chave, valor').then(({ data, error }) => {
     if (error) { console.warn('[config]', error.message); return; }
     if (!data) return;
     const c = Object.fromEntries(data.map(r => [r.chave, r.valor]));
     const nameParts = (c.evento_titulo || '').split(' ');
     const babyName = nameParts[nameParts.length - 1];
-    if (babyName) { const el = el$('brandName'); if (el) el.textContent = babyName; }
+    if (babyName) {
+      const el = document.getElementById('brandName');
+      if (el) el.textContent = babyName;
+    }
     if (c.evento_data) {
       const d = new Date(c.evento_data + 'T12:00:00');
-      const el = el$('chipDate');
+      const el = document.getElementById('chipDate');
       if (el) el.textContent = '📅 ' + d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
     }
-    if (c.evento_local) { const el = el$('chipLocal'); if (el) el.textContent = '📍 ' + c.evento_local.split(',')[0]; }
+    if (c.evento_local) {
+      const el = document.getElementById('chipLocal');
+      if (el) el.textContent = '📍 ' + c.evento_local.split(',')[0];
+    }
   });
 }
 
 function switchTab(tab) {
   const isLogin = tab === 'login';
-  el$('tabBtnLogin') .classList.toggle('active', isLogin);
-  el$('tabBtnSignup').classList.toggle('active', !isLogin);
-  el$('panelLogin')  .classList.toggle('active', isLogin);
-  el$('panelSignup') .classList.toggle('active', !isLogin);
+  document.getElementById('tabBtnLogin').classList.toggle('active', isLogin);
+  document.getElementById('tabBtnSignup').classList.toggle('active', !isLogin);
+  document.getElementById('panelLogin').classList.toggle('active', isLogin);
+  document.getElementById('panelSignup').classList.toggle('active', !isLogin);
 }
 
 async function onLogin() {
-  const email = val('loginEmail'), pass = val('loginPass');
-  const errEl = el$('loginErr'); errEl.classList.remove('show');
-  if (!email || !pass) { showAlert(errEl, 'Preencha todos os campos.'); return; }
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginErr');
+  errEl.classList.remove('show');
+  
+  if (!email || !pass) {
+    showAlert(errEl, 'Preencha todos os campos.');
+    return;
+  }
+  
   setBtn('btnLogin', true, 'Entrando...');
   const { ok, msg } = await doLogin(email, pass);
   setBtn('btnLogin', false, 'Entrar');
-  if (ok) route(); else showAlert(errEl, msg);
-}
-
-async function onSignup() {
-  const nome  = val('signupNome'), email = val('signupEmail'),
-        tel   = val('signupTel'),  pass  = val('signupPass'),
-        conf  = val('signupConf');
-  const errEl = el$('signupErr'), okEl = el$('signupOk');
-  errEl.classList.remove('show'); okEl.classList.remove('show');
-  if (!nome || !email || !tel || !pass) { showAlert(errEl, 'Preencha todos os campos.'); return; }
-  if (pass !== conf) { showAlert(errEl, 'As senhas não coincidem.'); return; }
-  if (pass.length < 6) { showAlert(errEl, 'A senha deve ter pelo menos 6 caracteres.'); return; }
-  setBtn('btnSignup', true, 'Criando conta...');
-  const { ok, msg } = await doSignup(nome, email, tel, pass);
-  setBtn('btnSignup', false, 'Criar conta');
-  if (ok) { showAlert(okEl, 'Conta criada! Redirecionando...'); setTimeout(() => route(), 1400); }
+  
+  if (ok) route();
   else showAlert(errEl, msg);
 }
 
+async function onSignup() {
+  const nome = document.getElementById('signupNome').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const tel = document.getElementById('signupTel').value.trim();
+  const pass = document.getElementById('signupPass').value;
+  const conf = document.getElementById('signupConf').value;
+  
+  const errEl = document.getElementById('signupErr');
+  const okEl = document.getElementById('signupOk');
+  errEl.classList.remove('show');
+  okEl.classList.remove('show');
+  
+  if (!nome || !email || !tel || !pass) {
+    showAlert(errEl, 'Preencha todos os campos.');
+    return;
+  }
+  if (pass !== conf) {
+    showAlert(errEl, 'As senhas não coincidem.');
+    return;
+  }
+  if (pass.length < 6) {
+    showAlert(errEl, 'A senha deve ter pelo menos 6 caracteres.');
+    return;
+  }
+  
+  setBtn('btnSignup', true, 'Criando conta...');
+  const { ok, msg } = await doSignup(nome, email, tel, pass);
+  setBtn('btnSignup', false, 'Criar conta');
+  
+  if (ok) {
+    showAlert(okEl, 'Conta criada! Redirecionando...');
+    setTimeout(() => route(), 1400);
+  } else {
+    showAlert(errEl, msg);
+  }
+}
+
 // ===================================================
-// APP SCREEN (gift list)
+// APP SCREEN
 // ===================================================
 async function renderApp() {
   window.location.hash = '';
@@ -297,10 +342,9 @@ async function renderApp() {
       </div>
     </div>
 
-    <!-- Modal -->
-    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+    <div class="modal-overlay" id="modalOverlay">
       <div class="modal">
-        <button class="modal-close" onclick="closeModal()">×</button>
+        <button class="modal-close">×</button>
         <h3 id="modalTitle"></h3>
         <p class="modal-sub" id="modalSub"></p>
         <div id="modalBody"></div>
@@ -308,61 +352,70 @@ async function renderApp() {
     </div>`;
 
   // Topbar actions
-  const acts = el$('topbarActions');
+  const acts = document.getElementById('topbarActions');
   if (isAdmin()) {
     acts.innerHTML = `
-      <button class="btn-outline" onclick="goAdmin()">⚙️ Admin</button>
-      <button class="btn-outline" onclick="doLogout()">Sair</button>`;
+      <button class="btn-outline" id="goAdminBtn">⚙️ Admin</button>
+      <button class="btn-outline" id="logoutBtn">Sair</button>`;
+    document.getElementById('goAdminBtn').onclick = () => goAdmin();
+    document.getElementById('logoutBtn').onclick = doLogout;
   } else {
-    acts.innerHTML = `<button class="btn-outline" onclick="doLogout()">Sair</button>`;
+    acts.innerHTML = `<button class="btn-outline" id="logoutBtn">Sair</button>`;
+    document.getElementById('logoutBtn').onclick = doLogout;
   }
 
-  // Load data in parallel
+  // Modal close
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalClose = modalOverlay.querySelector('.modal-close');
+  modalClose.onclick = () => closeModal();
+  modalOverlay.onclick = (e) => { if (e.target === modalOverlay) closeModal(); };
+
+  // Load data
+  await loadAppData();
+  await renderGrid();
+}
+
+async function loadAppData() {
   const [cfgRes, giftsRes, choiceRes] = await Promise.all([
     sb.from('configuracoes').select('chave, valor'),
     sb.from('presentes').select('*').neq('status', 'inativo').order('ordem'),
     sb.from('escolhas').select('*, presentes(titulo)').eq('usuario_id', me.id).maybeSingle()
   ]);
 
-  // Config
-  if (cfgRes.error) console.error('[cfg]', cfgRes.error.message);
   if (cfgRes.data) cfgRes.data.forEach(r => cfg[r.chave] = r.valor);
 
   const titulo = cfg.evento_titulo || 'Chá de Bebê';
-  const hEl = el$('heroTitle');
+  const hEl = document.getElementById('heroTitle');
   if (hEl) hEl.innerHTML = titulo.replace(/\b(do|da|de)\s+(\w+)/i, '$1 <em>$2</em>');
+  
   setText('heroDesc', cfg.evento_descricao || '');
-
+  
   if (cfg.evento_data) {
     const d = new Date(cfg.evento_data + 'T12:00:00');
     setText('evDate', d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }));
   }
   setText('evLocal', cfg.evento_local || '—');
-  setText('evPix',   cfg.pix_chave   || '—');
+  setText('evPix', cfg.pix_chave || '—');
 
-  // Gifts
-  if (giftsRes.error) console.error('[gifts]', giftsRes.error.message);
   gifts = giftsRes.data || [];
   setText('giftCount', gifts.length ? `${gifts.length} itens` : '');
 
-  // My choice
-  if (choiceRes.error && choiceRes.error.code !== 'PGRST116') {
-    console.error('[choice]', choiceRes.error.message);
-  }
   myChoice = choiceRes.data || null;
-  if (myChoice) el$('chosenBadge')?.classList.remove('hidden');
-
-  await renderGrid();
+  if (myChoice) {
+    const badge = document.getElementById('chosenBadge');
+    if (badge) badge.classList.remove('hidden');
+  }
 }
 
 async function renderGrid() {
-  const grid = el$('giftsGrid');
+  const grid = document.getElementById('giftsGrid');
   if (!grid) return;
 
   if (gifts.length === 0) {
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:64px 20px;color:var(--muted)">
-      <div style="font-size:48px;margin-bottom:16px">🎁</div>
-      <div style="font-size:15px">Nenhum presente disponível no momento.</div>
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">🎁</div>
+      <h3>Nenhum presente disponível</h3>
+      <p>Em breve adicionaremos mais opções!</p>
     </div>`;
     return;
   }
@@ -373,41 +426,33 @@ async function renderGrid() {
 }
 
 async function buildCard(g) {
-  const sold     = g.quantidade_restante <= 0;
-  const isMine   = myChoice?.presente_id === g.id;
+  const sold = g.quantidade_restante <= 0;
+  const isMine = myChoice?.presente_id === g.id;
   const comments = await loadComments(g.id);
 
   const commHtml = comments.map(c => {
-    const reactionMap = {};
-    (c.reacoes || []).forEach(r => {
-      (reactionMap[r.emoji] = reactionMap[r.emoji] || []).push(r.usuario_id);
-    });
-    const reactHtml = Object.entries(reactionMap).map(([emoji, users]) =>
-      `<button class="reaction-btn ${users.includes(me.id) ? 'active' : ''}"
-        data-cid="${c.id}" data-emoji="${emoji}">${emoji} ${users.length}</button>`
-    ).join('');
     return `<div class="comment">
-      <div class="comment-author">${esc(c.perfis?.nome || 'Anônimo')}</div>
+      <div class="comment-author">${esc(c.autor_nome || 'Anônimo')}</div>
       <div class="comment-text">${esc(c.comentario)}</div>
-      ${reactHtml ? `<div class="comment-reactions">${reactHtml}</div>` : ''}
+      <div class="comment-reactions" id="reactions-${c.id}"></div>
     </div>`;
   }).join('');
 
   const imgSrc = g.imagem_base64 || g.imagem_url || '';
 
   return `
-  <div class="gift-card ${sold ? 'esgotado' : ''}" id="gc-${g.id}">
+  <div class="gift-card ${sold ? 'esgotado' : ''}" data-gift-id="${g.id}">
     <div class="card-img">
       ${imgSrc
         ? `<img src="${imgSrc}" alt="${esc(g.titulo)}" loading="lazy">`
         : `<div class="card-img-icon">🎁</div>`}
-      ${sold  ? `<span class="card-badge">Esgotado</span>` : ''}
+      ${sold ? `<span class="card-badge">Esgotado</span>` : ''}
       ${isMine ? `<span class="card-badge mine">Meu presente ✓</span>` : ''}
     </div>
     <div class="card-body">
       <div class="card-title">${esc(g.titulo)}</div>
       ${g.descricao ? `<div class="card-desc">${esc(g.descricao)}</div>` : ''}
-      ${g.preco     ? `<div class="card-price">${money(g.preco)}</div>` : ''}
+      ${g.preco ? `<div class="card-price">${money(g.preco)}</div>` : ''}
       <div class="card-stock">
         ${sold ? '🎁 Já escolhido' : `📦 ${g.quantidade_restante} de ${g.quantidade_max} disponível`}
       </div>
@@ -416,7 +461,7 @@ async function buildCard(g) {
       </div>` : ''}
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
         ${!isMine && !sold && !myChoice ? `
-          <button class="btn btn-primary btn-full" data-action="choose"
+          <button class="btn btn-primary btn-full choose-gift-btn"
             data-id="${g.id}" data-title="${esc(g.titulo)}" data-price="${g.preco || 0}">
             🎁 Quero este presente
           </button>` : ''}
@@ -430,7 +475,7 @@ async function buildCard(g) {
         ${commHtml}
         <div class="comment-input-row">
           <input class="comment-input" id="ci-${g.id}" placeholder="Deixe um comentário...">
-          <button class="btn-send" data-action="comment" data-id="${g.id}">Enviar</button>
+          <button class="btn-send comment-send-btn" data-id="${g.id}">Enviar</button>
         </div>
       </div>
       <div class="comments-toggle" data-pid="${g.id}">
@@ -442,70 +487,111 @@ async function buildCard(g) {
 }
 
 function bindGridEvents() {
-  document.querySelectorAll('[data-action="choose"]').forEach(btn => {
-    btn.addEventListener('click', () =>
-      openChoiceModal(btn.dataset.id, btn.dataset.title, parseFloat(btn.dataset.price)));
+  // Botões de escolher presente
+  document.querySelectorAll('.choose-gift-btn').forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.dataset.id;
+      const title = btn.dataset.title;
+      const price = parseFloat(btn.dataset.price);
+      openChoiceModal(id, title, price);
+    };
   });
+
+  // Toggle comentários
   document.querySelectorAll('.comments-toggle').forEach(el => {
-    el.addEventListener('click', () => el$('cb-' + el.dataset.pid)?.classList.toggle('open'));
+    el.onclick = () => {
+      const body = document.getElementById('cb-' + el.dataset.pid);
+      if (body) body.classList.toggle('open');
+    };
   });
-  document.querySelectorAll('[data-action="comment"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const input = el$('ci-' + btn.dataset.id);
-      if (input?.value.trim()) submitComment(btn.dataset.id, input.value.trim());
-    });
+
+  // Botões de enviar comentário
+  document.querySelectorAll('.comment-send-btn').forEach(btn => {
+    btn.onclick = () => {
+      const input = document.getElementById('ci-' + btn.dataset.id);
+      if (input?.value.trim()) {
+        submitComment(btn.dataset.id, input.value.trim());
+      }
+    };
   });
+
+  // Enter no input de comentário
   document.querySelectorAll('.comment-input').forEach(inp => {
-    inp.addEventListener('keydown', e => {
+    inp.onkeydown = (e) => {
       if (e.key === 'Enter') {
         const id = inp.id.replace('ci-', '');
         if (inp.value.trim()) submitComment(id, inp.value.trim());
       }
-    });
-  });
-  document.querySelectorAll('.reaction-btn').forEach(btn => {
-    btn.addEventListener('click', () => toggleReaction(btn.dataset.cid, btn.dataset.emoji));
+    };
   });
 }
 
 async function loadComments(pid) {
   if (commCache[pid]) return commCache[pid];
-  const { data, error } = await sb.from('comentarios')
-    .select('*, perfis(nome), reacoes(*)').eq('presente_id', pid).order('criado_em');
-  if (error) console.warn('[comments]', error.message);
-  commCache[pid] = data || [];
-  return commCache[pid];
+  
+  const { data, error } = await sb
+    .from('comentarios')
+    .select(`
+      id,
+      comentario,
+      criado_em,
+      perfis!comentarios_usuario_id_fkey (nome)
+    `)
+    .eq('presente_id', pid)
+    .order('criado_em', { ascending: true });
+  
+  if (error) {
+    console.warn('[comments]', error.message);
+    return [];
+  }
+  
+  const formatted = (data || []).map(c => ({
+    id: c.id,
+    comentario: c.comentario,
+    criado_em: c.criado_em,
+    autor_nome: c.perfis?.nome || 'Anônimo'
+  }));
+  
+  commCache[pid] = formatted;
+  return formatted;
 }
 
 async function submitComment(pid, text) {
   const { error } = await sb.from('comentarios').insert({
-    presente_id: pid, usuario_id: me.id, comentario: text
+    presente_id: pid,
+    usuario_id: me.id,
+    comentario: text
   });
-  if (error) { toast('Erro ao enviar comentário.', 'error'); return; }
+  
+  if (error) {
+    console.error('[comment error]', error);
+    toast('Erro ao enviar comentário.', 'error');
+    return;
+  }
+  
   delete commCache[pid];
-  const wasOpen = el$('cb-' + pid)?.classList.contains('open');
+  const wasOpen = document.getElementById('cb-' + pid)?.classList.contains('open');
   await renderGrid();
-  if (wasOpen) el$('cb-' + pid)?.classList.add('open');
+  if (wasOpen) {
+    const body = document.getElementById('cb-' + pid);
+    if (body) body.classList.add('open');
+  }
+  toast('Comentário enviado!', 'success');
 }
 
-async function toggleReaction(cid, emoji) {
-  const { data } = await sb.from('reacoes').select('id')
-    .eq('comentario_id', cid).eq('usuario_id', me.id).eq('emoji', emoji).maybeSingle();
-  if (data) await sb.from('reacoes').delete().eq('id', data.id);
-  else await sb.from('reacoes').insert({ comentario_id: cid, usuario_id: me.id, emoji });
-  commCache = {};
-  renderGrid();
-}
-
-// ── Choice Modal ─────────────────────────────────────
+// ===================================================
+// CHOICE MODAL
+// ===================================================
 
 function openChoiceModal(gid, title, price) {
-  el$('modalTitle').textContent = title;
-  el$('modalSub').textContent   = 'Como você quer contribuir?';
+  const modal = document.getElementById('modalOverlay');
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalSub').textContent = 'Como você quer contribuir?';
+  
   const hasPix = !!cfg.pix_chave;
   let chosen = null;
 
-  el$('modalBody').innerHTML = `
+  document.getElementById('modalBody').innerHTML = `
     <div class="choice-option" id="optGift">
       <h4>🎁 Comprar o presente</h4>
       <p>${price ? money(price) : 'Sem valor definido'} — você compra e traz no dia</p>
@@ -519,75 +605,98 @@ function openChoiceModal(gid, title, price) {
       <label>Mensagem para os pais (opcional)</label>
       <textarea id="choiceMsg" rows="2" placeholder="Uma mensagem especial..."></textarea>
     </div>
-    <button class="btn btn-primary btn-full" id="btnConfirm" style="margin-top:6px" disabled>
+    <button class="btn btn-primary btn-full" id="btnConfirmChoice" style="margin-top:6px" disabled>
       Confirmar escolha
     </button>`;
 
   function pick(id, tipo) {
     document.querySelectorAll('.choice-option').forEach(o => o.classList.remove('selected'));
-    el$(id)?.classList.add('selected');
+    const opt = document.getElementById(id);
+    if (opt) opt.classList.add('selected');
     chosen = tipo;
-    el$('btnConfirm').disabled = false;
+    const btn = document.getElementById('btnConfirmChoice');
+    if (btn) btn.disabled = false;
   }
 
-  el$('optGift')?.addEventListener('click', () => pick('optGift', 'presente'));
-  el$('optPix')?.addEventListener('click',  () => pick('optPix',  'pix'));
+  const optGift = document.getElementById('optGift');
+  const optPix = document.getElementById('optPix');
+  if (optGift) optGift.onclick = () => pick('optGift', 'presente');
+  if (optPix) optPix.onclick = () => pick('optPix', 'pix');
 
-  el$('btnConfirm').addEventListener('click', async () => {
+  const confirmBtn = document.getElementById('btnConfirmChoice');
+  confirmBtn.onclick = async () => {
     if (!chosen) return;
-    const msg = val('choiceMsg');
-    setBtn('btnConfirm', true, 'Confirmando...');
+    const msg = document.getElementById('choiceMsg').value.trim();
     await confirmChoice(gid, chosen, price, msg);
-  });
+  };
 
-  el$('modalOverlay').classList.add('open');
+  modal.classList.add('open');
 }
 
 async function confirmChoice(gid, tipo, valor, mensagem) {
+  console.log('[DEBUG] confirmChoice:', { gid, tipo, valor, mensagem });
+  
   const payload = {
-    presente_id: gid, usuario_id: me.id,
-    tipo_pagamento: tipo, quantidade: 1,
-    ...(valor    ? { valor }    : {}),
+    presente_id: gid,
+    usuario_id: me.id,
+    tipo_pagamento: tipo,
+    quantidade: 1,
+    ...(valor ? { valor } : {}),
     ...(mensagem ? { mensagem } : {})
   };
-
-  const { error } = await sb.from('escolhas').insert(payload);
-
+  
+  console.log('[DEBUG] Payload:', payload);
+  
+  const { data, error } = await sb.from('escolhas').insert(payload).select();
+  
+  console.log('[DEBUG] Resposta:', { data, error });
+  
   if (error) {
-    console.error('[choice]', error);
-    const isDuplicate = error.code === '23505' || error.message.includes('unique');
+    console.error('[ERROR]', error);
+    const isDuplicate = error.code === '23505' || error.message?.includes('unique');
     toast(isDuplicate ? 'Você já escolheu um presente!' : 'Erro: ' + error.message, 'error');
-    setBtn('btnConfirm', false, 'Confirmar escolha');
     return;
   }
-
+  
   closeModal();
   toast('Presente escolhido com sucesso! 🎉', 'success');
-
-  // Reload gifts + choice
+  
+  // Recarregar dados
   const [gr, cr] = await Promise.all([
     sb.from('presentes').select('*').neq('status', 'inativo').order('ordem'),
     sb.from('escolhas').select('*, presentes(titulo)').eq('usuario_id', me.id).maybeSingle()
   ]);
-  gifts    = gr.data || [];
+  
+  gifts = gr.data || [];
   myChoice = cr.data || null;
-  if (myChoice) el$('chosenBadge')?.classList.remove('hidden');
-  renderGrid();
+  
+  if (myChoice) {
+    const badge = document.getElementById('chosenBadge');
+    if (badge) badge.classList.remove('hidden');
+  }
+  
+  await renderGrid();
 }
 
-function closeModal(e) {
-  if (e && e.type === 'click' && e.target !== el$('modalOverlay')) return;
-  el$('modalOverlay')?.classList.remove('open');
+function closeModal() {
+  const modal = document.getElementById('modalOverlay');
+  if (modal) modal.classList.remove('open');
 }
 
 // ===================================================
 // ADMIN SCREEN
 // ===================================================
 
-function goAdmin() { window.location.hash = '#admin'; renderAdmin(); }
+function goAdmin() {
+  window.location.hash = '#admin';
+  renderAdmin();
+}
 
 async function renderAdmin() {
-  if (!isAdmin()) { renderApp(); return; }
+  if (!isAdmin()) {
+    renderApp();
+    return;
+  }
 
   document.getElementById('app').innerHTML = `
     <div class="screen-admin">
@@ -607,17 +716,17 @@ async function renderAdmin() {
           <button class="nav-item" data-panel="configuracoes"><span class="nav-icon">⚙️</span>Configurações</button>
         </nav>
         <div class="sidebar-footer">
-          <button class="nav-item" onclick="backToSite()"><span class="nav-icon">🌐</span>Ver site</button>
-          <button class="nav-item" onclick="doLogout()"><span class="nav-icon">🚪</span>Sair</button>
+          <button class="nav-item" id="backToSiteBtn"><span class="nav-icon">🌐</span>Ver site</button>
+          <button class="nav-item" id="adminLogoutBtn"><span class="nav-icon">🚪</span>Sair</button>
         </div>
       </aside>
 
-      <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+      <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
       <main class="admin-main">
         <div class="admin-topbar">
           <div style="display:flex;align-items:center;gap:14px">
-            <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+            <button class="sidebar-toggle" id="sidebarToggleBtn">☰</button>
             <h1 id="admTitle">Dashboard</h1>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
@@ -627,14 +736,12 @@ async function renderAdmin() {
         </div>
 
         <div class="admin-content">
-
-          <!-- Dashboard -->
           <div class="admin-panel active" id="ap-dashboard">
             <div class="stats-grid">
               <div class="stat-card c-terra"><div class="stat-icon">🎁</div><div class="stat-label">Presentes</div><div class="stat-value" id="stGifts">—</div></div>
-              <div class="stat-card c-sage"> <div class="stat-icon">✅</div><div class="stat-label">Escolhas</div><div class="stat-value" id="stChoices">—</div></div>
-              <div class="stat-card c-blue"> <div class="stat-icon">👥</div><div class="stat-label">Convidados</div><div class="stat-value" id="stGuests">—</div></div>
-              <div class="stat-card c-gold"> <div class="stat-icon">💰</div><div class="stat-label">Valor Total Est.</div><div class="stat-value" id="stValue">—</div></div>
+              <div class="stat-card c-sage"><div class="stat-icon">✅</div><div class="stat-label">Escolhas</div><div class="stat-value" id="stChoices">—</div></div>
+              <div class="stat-card c-blue"><div class="stat-icon">👥</div><div class="stat-label">Convidados</div><div class="stat-value" id="stGuests">—</div></div>
+              <div class="stat-card c-gold"><div class="stat-icon">💰</div><div class="stat-label">Valor Total Est.</div><div class="stat-value" id="stValue">—</div></div>
             </div>
             <div class="a-card">
               <div class="a-card-title">📋 Últimas escolhas</div>
@@ -647,18 +754,16 @@ async function renderAdmin() {
             </div>
           </div>
 
-          <!-- Presentes -->
           <div class="admin-panel" id="ap-presentes">
             <div class="panel-header-row">
               <h2 class="panel-title">🎁 Presentes</h2>
-              <button class="btn btn-primary" onclick="openGiftForm()">+ Novo Presente</button>
+              <button class="btn btn-primary" id="newGiftBtn">+ Novo Presente</button>
             </div>
             <div class="presents-admin-grid" id="admGiftsGrid">
               <div style="text-align:center;padding:40px;color:var(--muted)">Carregando...</div>
             </div>
           </div>
 
-          <!-- Escolhas -->
           <div class="admin-panel" id="ap-escolhas">
             <div class="a-card">
               <div class="a-card-title">📋 Todas as Escolhas</div>
@@ -671,7 +776,6 @@ async function renderAdmin() {
             </div>
           </div>
 
-          <!-- Convidados -->
           <div class="admin-panel" id="ap-convidados">
             <div class="panel-header-row">
               <h2 class="panel-title">👥 Convidados</h2>
@@ -686,7 +790,6 @@ async function renderAdmin() {
             </div>
           </div>
 
-          <!-- Config -->
           <div class="admin-panel" id="ap-configuracoes">
             <div class="a-card">
               <div class="a-card-title">⚙️ Configurações do Evento</div>
@@ -701,55 +804,57 @@ async function renderAdmin() {
                   <div class="field"><label>Chave PIX</label><input type="text" id="cfgPix"></div>
                   <div class="field"><label>Nome do beneficiário PIX</label><input type="text" id="cfgPixName"></div>
                   <div class="field"><label>E-mail admin (notificações)</label><input type="email" id="cfgAdminEmail"></div>
-                  <div class="field">
-                    <label>Imagem de capa</label>
-                    <input type="file" id="cfgCover" accept="image/*">
-                    <img id="cfgCoverPrev" class="img-preview">
-                  </div>
                 </div>
               </div>
               <button class="btn btn-primary" id="btnSaveCfg">💾 Salvar Configurações</button>
             </div>
           </div>
-
         </div>
       </main>
     </div>
 
-    <!-- Gift modal -->
-    <div class="modal-overlay" id="modalGift" onclick="closeGiftModal(event)">
+    <div class="modal-overlay" id="modalGift">
       <div class="modal modal-lg">
-        <button class="modal-close" onclick="closeGiftModal()">×</button>
+        <button class="modal-close">×</button>
         <h3 id="giftModalTitle">Novo Presente</h3>
         <p class="modal-sub">Preencha os dados do presente</p>
         <div id="giftModalBody"></div>
       </div>
     </div>
 
-    <!-- Guest modal -->
-    <div class="modal-overlay" id="modalGuest" onclick="closeGuestModal(event)">
+    <div class="modal-overlay" id="modalGuest">
       <div class="modal">
-        <button class="modal-close" onclick="closeGuestModal()">×</button>
+        <button class="modal-close">×</button>
         <h3 id="guestModalTitle">Editar Convidado</h3>
         <p class="modal-sub">Altere as informações do convidado</p>
         <div id="guestModalBody"></div>
       </div>
     </div>`;
 
-  // Nav binding
+  // Bind admin events
   document.querySelectorAll('.nav-item[data-panel]').forEach(btn => {
-    btn.addEventListener('click', () => admShowPanel(btn.dataset.panel, btn));
+    btn.onclick = () => admShowPanel(btn.dataset.panel, btn);
   });
 
-  // Config save
-  el$('cfgCover')?.addEventListener('change', function() { previewImg(this, 'cfgCoverPrev'); });
-  el$('btnSaveCfg')?.addEventListener('click', admSaveConfig);
+  document.getElementById('sidebarToggleBtn').onclick = toggleSidebar;
+  document.getElementById('sidebarOverlay').onclick = toggleSidebar;
+  document.getElementById('backToSiteBtn').onclick = backToSite;
+  document.getElementById('adminLogoutBtn').onclick = doLogout;
+  document.getElementById('newGiftBtn').onclick = () => openGiftForm();
+  document.getElementById('btnSaveCfg').onclick = admSaveConfig;
+
+  // Modal closes
+  const modalGift = document.getElementById('modalGift');
+  const modalGuest = document.getElementById('modalGuest');
+  modalGift.querySelector('.modal-close').onclick = () => closeGiftModal();
+  modalGuest.querySelector('.modal-close').onclick = () => closeGuestModal();
+  modalGift.onclick = (e) => { if (e.target === modalGift) closeGiftModal(); };
+  modalGuest.onclick = (e) => { if (e.target === modalGuest) closeGuestModal(); };
 
   await admLoadAll();
   admRenderAll();
 }
 
-// ── Admin: load all data ─────────────────────────────
 async function admLoadAll() {
   const [r1, r2, r3, r4] = await Promise.all([
     sb.from('presentes').select('*').order('ordem'),
@@ -763,10 +868,10 @@ async function admLoadAll() {
   if (r3.error) console.error('[adm users]', r3.error.message);
   if (r4.error) console.error('[adm cfg]', r4.error.message);
 
-  adm.gifts   = r1.data || [];
+  adm.gifts = r1.data || [];
   adm.choices = r2.data || [];
-  adm.users   = r3.data || [];
-  adm.cfg     = {};
+  adm.users = r3.data || [];
+  adm.cfg = {};
   if (r4.data) r4.data.forEach(c => adm.cfg[c.chave] = c.valor);
 }
 
@@ -781,29 +886,41 @@ function admRenderAll() {
 function admShowPanel(id, btn) {
   document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item[data-panel]').forEach(b => b.classList.remove('active'));
-  el$('ap-' + id)?.classList.add('active');
-  btn?.classList.add('active');
+  const panel = document.getElementById('ap-' + id);
+  if (panel) panel.classList.add('active');
+  if (btn) btn.classList.add('active');
+  
   const labels = {
     dashboard: 'Dashboard', presentes: 'Presentes',
     escolhas: 'Escolhas', convidados: 'Convidados', configuracoes: 'Configurações'
   };
   setText('admTitle', labels[id] || id);
-  el$('adminSidebar')?.classList.remove('open');
-  el$('sidebarOverlay')?.classList.remove('active');
+  
+  const sidebar = document.getElementById('adminSidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  if (sidebar) sidebar.classList.remove('open');
+  if (overlay) overlay.classList.remove('active');
 }
 
 function toggleSidebar() {
-  el$('adminSidebar')?.classList.toggle('open');
-  el$('sidebarOverlay')?.classList.toggle('active');
+  const sidebar = document.getElementById('adminSidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  if (sidebar) sidebar.classList.toggle('open');
+  if (overlay) overlay.classList.toggle('active');
 }
 
-// ── Dashboard ────────────────────────────────────────
+function backToSite() {
+  window.location.hash = '';
+  commCache = {};
+  renderApp();
+}
+
 function admRenderDashboard() {
   const totalValue = adm.choices.reduce((s, c) => s + (c.presentes?.preco || 0), 0);
-  setText('stGifts',   adm.gifts.length);
+  setText('stGifts', adm.gifts.length);
   setText('stChoices', adm.choices.length);
-  setText('stGuests',  adm.users.filter(u => u.tipo === 'usuario').length);
-  setText('stValue',   money(totalValue));
+  setText('stGuests', adm.users.filter(u => u.tipo === 'usuario').length);
+  setText('stValue', money(totalValue));
 
   const tbody = document.querySelector('#tDash tbody');
   if (!tbody) return;
@@ -813,12 +930,12 @@ function admRenderDashboard() {
       <td>${esc(c.presentes?.titulo || '—')}</td>
       <td><span class="badge badge-${c.tipo_pagamento}">${payLabel(c.tipo_pagamento)}</span></td>
       <td style="color:var(--muted)">${fmtDate(c.criado_em)}</td>
-    </tr>`).join('') || `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">Sem registos</td></tr>`;
+    </tr>
+  `).join('') || '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">Sem registos</td></tr>';
 }
 
-// ── Gifts admin ──────────────────────────────────────
 function admRenderGifts() {
-  const grid = el$('admGiftsGrid');
+  const grid = document.getElementById('admGiftsGrid');
   if (!grid) return;
 
   if (adm.gifts.length === 0) {
@@ -831,10 +948,10 @@ function admRenderGifts() {
   }
 
   grid.innerHTML = adm.gifts.map(g => {
-    const imgSrc  = g.imagem_base64 || g.imagem_url || '';
-    const sold    = g.quantidade_restante <= 0;
-    const sClass  = g.status === 'inativo' ? 'inativo' : (sold ? 'esgotado' : 'ativo');
-    const sLabel  = g.status === 'inativo' ? 'Inativo'  : (sold ? 'Esgotado'  : 'Ativo');
+    const imgSrc = g.imagem_base64 || g.imagem_url || '';
+    const sold = g.quantidade_restante <= 0;
+    const sClass = g.status === 'inativo' ? 'inativo' : (sold ? 'esgotado' : 'ativo');
+    const sLabel = g.status === 'inativo' ? 'Inativo' : (sold ? 'Esgotado' : 'Ativo');
     return `
     <div class="pac">
       <div class="pac-img">
@@ -849,23 +966,33 @@ function admRenderGifts() {
           <span class="pac-stock">📦 ${g.quantidade_restante}/${g.quantidade_max}</span>
         </div>
         <div class="pac-actions">
-          <button class="btn btn-ghost" style="flex:1;font-size:12px;padding:7px"
-            onclick='openGiftForm(${JSON.stringify(g).replace(/'/g,"&#39;")})'>✏️ Editar</button>
-          <button class="btn btn-danger" style="padding:7px 12px;font-size:13px"
-            onclick="admDeleteGift('${g.id}','${esc(g.titulo)}')">🗑️</button>
+          <button class="btn btn-ghost edit-gift-btn" style="flex:1;font-size:12px;padding:7px">✏️ Editar</button>
+          <button class="btn btn-danger delete-gift-btn" style="padding:7px 12px;font-size:13px">🗑️</button>
         </div>
       </div>
     </div>`;
   }).join('');
+
+  // Bind edit/delete buttons
+  adm.gifts.forEach((g, idx) => {
+    const card = grid.children[idx];
+    if (card) {
+      const editBtn = card.querySelector('.edit-gift-btn');
+      const delBtn = card.querySelector('.delete-gift-btn');
+      if (editBtn) editBtn.onclick = () => openGiftForm(g);
+      if (delBtn) delBtn.onclick = () => admDeleteGift(g.id, g.titulo);
+    }
+  });
 }
 
-// ── Gift form modal ──────────────────────────────────
 function openGiftForm(g = null) {
   const editing = !!g;
-  setText('giftModalTitle', editing ? '✏️ Editar Presente' : '➕ Novo Presente');
+  const modal = document.getElementById('modalGift');
+  document.getElementById('giftModalTitle').textContent = editing ? '✏️ Editar Presente' : '➕ Novo Presente';
+  
   const imgSrc = editing ? (g.imagem_base64 || g.imagem_url || '') : '';
 
-  el$('giftModalBody').innerHTML = `
+  document.getElementById('giftModalBody').innerHTML = `
     <input type="hidden" id="gmId" value="${editing ? g.id : ''}">
     <div class="field"><label>Título *</label>
       <input type="text" id="gmTitle" placeholder="Ex: Kit de Banho" value="${editing ? esc(g.titulo) : ''}">
@@ -887,88 +1014,111 @@ function openGiftForm(g = null) {
       </div>
       <div class="field"><label>Status</label>
         <select id="gmStatus">
-          <option value="ativo"   ${!editing || g.status === 'ativo'   ? 'selected' : ''}>✅ Ativo</option>
-          <option value="inativo" ${editing  && g.status === 'inativo' ? 'selected' : ''}>🚫 Inativo</option>
+          <option value="ativo" ${!editing || g.status === 'ativo' ? 'selected' : ''}>✅ Ativo</option>
+          <option value="inativo" ${editing && g.status === 'inativo' ? 'selected' : ''}>🚫 Inativo</option>
         </select>
       </div>
     </div>
     <div class="field"><label>Link de compra</label>
       <input type="url" id="gmLink" placeholder="https://..." value="${editing ? esc(g.link_compra || '') : ''}">
     </div>
-
     <div style="margin-bottom:14px">
       <div style="font-weight:600;font-size:13px;margin-bottom:8px">🖼️ Imagem</div>
       <div class="img-tabs">
-        <button class="img-tab active" id="imgTabUpload" type="button" onclick="switchImgTab('upload')">📁 Upload</button>
-        <button class="img-tab"        id="imgTabUrl"    type="button" onclick="switchImgTab('url')">🔗 URL</button>
+        <button class="img-tab active" id="imgTabUpload">📁 Upload</button>
+        <button class="img-tab" id="imgTabUrl">🔗 URL</button>
       </div>
       <div id="imgPanelUpload">
-        <div class="upload-area" onclick="el$('gmImg').click()">
+        <div class="upload-area" id="uploadArea">
           <div class="upload-icon">📷</div>
-          <p>Clique para seleccionar uma imagem</p>
-          <input type="file" id="gmImg" accept="image/*" style="display:none" onchange="previewImg(this,'gmImgPrev')">
+          <p>Clique para selecionar uma imagem</p>
+          <input type="file" id="gmImg" accept="image/*" style="display:none">
         </div>
-        ${imgSrc && !imgSrc.startsWith('http') ? `<img id="gmImgPrev" class="img-preview" src="${imgSrc}" style="display:block">` : `<img id="gmImgPrev" class="img-preview">`}
+        <img id="gmImgPrev" class="img-preview" style="${imgSrc && !imgSrc.startsWith('http') ? 'display:block' : 'display:none'}" src="${imgSrc || ''}">
       </div>
       <div id="imgPanelUrl" style="display:none">
         <div class="field"><input type="url" id="gmImgUrl" placeholder="https://..." value="${editing && g.imagem_url ? g.imagem_url : ''}"></div>
       </div>
     </div>
-
     <div class="modal-actions">
-      <button class="btn btn-ghost" type="button" onclick="closeGiftModal()">Cancelar</button>
-      <button class="btn btn-primary" id="btnSaveGift" type="button" onclick="admSaveGift()">💾 Salvar</button>
+      <button class="btn btn-ghost" id="cancelGiftBtn">Cancelar</button>
+      <button class="btn btn-primary" id="saveGiftBtn">💾 Salvar</button>
     </div>`;
 
-  el$('modalGift').classList.add('open');
+  // Bind events
+  document.getElementById('uploadArea').onclick = () => document.getElementById('gmImg').click();
+  document.getElementById('gmImg').onchange = (e) => previewImg(e.target, 'gmImgPrev');
+  document.getElementById('imgTabUpload').onclick = () => switchImgTab('upload');
+  document.getElementById('imgTabUrl').onclick = () => switchImgTab('url');
+  document.getElementById('cancelGiftBtn').onclick = () => closeGiftModal();
+  document.getElementById('saveGiftBtn').onclick = admSaveGift;
+  
+  modal.classList.add('open');
 }
 
 function switchImgTab(tab) {
   const isUpload = tab === 'upload';
-  el$('imgTabUpload').classList.toggle('active', isUpload);
-  el$('imgTabUrl')   .classList.toggle('active', !isUpload);
-  el$('imgPanelUpload').style.display = isUpload ? '' : 'none';
-  el$('imgPanelUrl')  .style.display = isUpload ? 'none' : '';
+  const tabUpload = document.getElementById('imgTabUpload');
+  const tabUrl = document.getElementById('imgTabUrl');
+  const panelUpload = document.getElementById('imgPanelUpload');
+  const panelUrl = document.getElementById('imgPanelUrl');
+  
+  if (tabUpload) tabUpload.classList.toggle('active', isUpload);
+  if (tabUrl) tabUrl.classList.toggle('active', !isUpload);
+  if (panelUpload) panelUpload.style.display = isUpload ? '' : 'none';
+  if (panelUrl) panelUrl.style.display = isUpload ? 'none' : '';
 }
 
 async function admSaveGift() {
-  const id     = val('gmId');
-  const titulo = val('gmTitle');
-  if (!titulo) { toast('Título é obrigatório.', 'error'); return; }
+  const id = document.getElementById('gmId').value;
+  const titulo = document.getElementById('gmTitle').value.trim();
+  if (!titulo) {
+    toast('Título é obrigatório.', 'error');
+    return;
+  }
 
-  setBtn('btnSaveGift', true, 'Salvando...');
+  const saveBtn = document.getElementById('saveGiftBtn');
+  setBtn('saveGiftBtn', true, 'Salvando...');
 
   let imagem_base64 = null;
-  let imagem_url    = val('gmImgUrl') || null;
-  const file = el$('gmImg')?.files?.[0];
-  if (file) imagem_base64 = await toBase64(file);
+  let imagem_url = document.getElementById('gmImgUrl').value || null;
+  const file = document.getElementById('gmImg').files?.[0];
+  if (file) {
+    imagem_base64 = await toBase64(file);
+    imagem_url = null;
+  }
 
   const payload = {
     titulo,
-    descricao:           val('gmDesc')   || null,
-    preco:               parseFloat(val('gmPrice')) || null,
-    quantidade_max:      parseInt(val('gmQty')) || 1,
-    ordem:               parseInt(val('gmOrder')) || 0,
-    status:              val('gmStatus') || 'ativo',
-    link_compra:         val('gmLink')   || null,
-    atualizado_em:       new Date(),
+    descricao: document.getElementById('gmDesc').value.trim() || null,
+    preco: parseFloat(document.getElementById('gmPrice').value) || null,
+    quantidade_max: parseInt(document.getElementById('gmQty').value) || 1,
+    ordem: parseInt(document.getElementById('gmOrder').value) || 0,
+    status: document.getElementById('gmStatus').value,
+    link_compra: document.getElementById('gmLink').value.trim() || null,
+    atualizado_em: new Date(),
     ...(imagem_base64 ? { imagem_base64, imagem_url: null } : {}),
     ...(imagem_url && !imagem_base64 ? { imagem_url, imagem_base64: null } : {})
   };
 
   let error;
   if (id) {
-    ({ error } = await sb.from('presentes').update(payload).eq('id', id));
+    const { error: updateError } = await sb.from('presentes').update(payload).eq('id', id);
+    error = updateError;
   } else {
     payload.quantidade_restante = payload.quantidade_max;
-    ({ error } = await sb.from('presentes').insert(payload));
+    const { error: insertError } = await sb.from('presentes').insert(payload);
+    error = insertError;
   }
 
-  setBtn('btnSaveGift', false, '💾 Salvar');
+  setBtn('saveGiftBtn', false, '💾 Salvar');
 
-  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  if (error) {
+    toast('Erro: ' + error.message, 'error');
+    return;
+  }
 
-  toast(id ? 'Presente actualizado! ✅' : 'Presente adicionado! ✅', 'success');
+  toast(id ? 'Presente atualizado! ✅' : 'Presente adicionado! ✅', 'success');
   closeGiftModal();
   await admLoadAll();
   admRenderGifts();
@@ -976,21 +1126,23 @@ async function admSaveGift() {
 }
 
 async function admDeleteGift(id, name) {
-  if (!confirm(`Excluir "${name}"? Esta acção não pode ser desfeita.`)) return;
+  if (!confirm(`Excluir "${name}"? Esta ação não pode ser desfeita.`)) return;
   const { error } = await sb.from('presentes').delete().eq('id', id);
-  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  if (error) {
+    toast('Erro: ' + error.message, 'error');
+    return;
+  }
   toast('Presente removido.', 'success');
   await admLoadAll();
   admRenderGifts();
   admRenderDashboard();
 }
 
-function closeGiftModal(e) {
-  if (e && e.type === 'click' && e.target !== el$('modalGift')) return;
-  el$('modalGift')?.classList.remove('open');
+function closeGiftModal() {
+  const modal = document.getElementById('modalGift');
+  if (modal) modal.classList.remove('open');
 }
 
-// ── Choices ──────────────────────────────────────────
 function admRenderChoices() {
   const tbody = document.querySelector('#tChoices tbody');
   if (!tbody) return;
@@ -1003,37 +1155,49 @@ function admRenderChoices() {
       <td><span class="badge badge-${c.tipo_pagamento}">${payLabel(c.tipo_pagamento)}</span></td>
       <td>${c.presentes?.preco ? money(c.presentes.preco) : '—'}</td>
       <td style="color:var(--muted)">${fmtDate(c.criado_em)}</td>
-    </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Sem escolhas</td></tr>`;
+    </tr>
+  `).join('') || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Sem escolhas</td></tr>';
 }
 
-// ── Guests ───────────────────────────────────────────
 function admRenderGuests() {
   const tbody = document.querySelector('#tGuests tbody');
   if (!tbody) return;
   tbody.innerHTML = adm.users.map(u => {
     const choice = u.escolhas?.[0];
-    return `<tr>
+    return `
+    <tr>
       <td><strong>${esc(u.nome || '—')}</strong></td>
       <td style="color:var(--muted)">${esc(u.email || '—')}</td>
       <td style="color:var(--muted)">${esc(u.telefone || '—')}</td>
-      <td><span class="badge badge-${u.tipo}">${u.tipo}</span></td>
+      <td><span class="badge badge-${u.tipo}">${u.tipo === 'admin' ? '⭐ Admin' : '👤 Usuário'}</span></td>
       <td>${choice ? esc(choice.presentes?.titulo || '—') : '<span style="color:var(--muted)">—</span>'}</td>
       <td style="color:var(--muted)">${fmtDate(u.criado_em)}</td>
       <td>
         <div class="table-actions">
-          <button class="tbl-btn tbl-btn-edit" onclick="openGuestModal('${u.user_id}')">✏️</button>
-          <button class="tbl-btn tbl-btn-del"  onclick="admDeleteGuest('${u.user_id}','${esc(u.nome || '')}')">🗑️</button>
+          <button class="tbl-btn edit-guest-btn" data-id="${u.user_id}">✏️</button>
+          <button class="tbl-btn tbl-btn-del delete-guest-btn" data-id="${u.user_id}" data-name="${esc(u.nome || '')}">🗑️</button>
         </div>
       </td>
     </tr>`;
-  }).join('') || `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Sem convidados</td></tr>`;
+  }).join('') || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Sem convidados</td></tr>';
+
+  // Bind guest actions
+  document.querySelectorAll('.edit-guest-btn').forEach(btn => {
+    btn.onclick = () => openGuestModal(btn.dataset.id);
+  });
+  document.querySelectorAll('.delete-guest-btn').forEach(btn => {
+    btn.onclick = () => admDeleteGuest(btn.dataset.id, btn.dataset.name);
+  });
 }
 
 function openGuestModal(userId) {
   const u = adm.users.find(x => x.user_id === userId);
   if (!u) return;
-  setText('guestModalTitle', 'Editar Convidado');
-  el$('guestModalBody').innerHTML = `
+  
+  const modal = document.getElementById('modalGuest');
+  document.getElementById('guestModalTitle').textContent = 'Editar Convidado';
+  
+  document.getElementById('guestModalBody').innerHTML = `
     <input type="hidden" id="gmUserId" value="${u.user_id}">
     <div class="field"><label>Nome</label>
       <input type="text" id="gmGuestName" value="${esc(u.nome || '')}">
@@ -1043,8 +1207,8 @@ function openGuestModal(userId) {
     </div>
     <div class="field"><label>Tipo</label>
       <select id="gmGuestType">
-        <option value="usuario" ${u.tipo === 'usuario' ? 'selected' : ''}>👤 Utilizador</option>
-        <option value="admin"   ${u.tipo === 'admin'   ? 'selected' : ''}>⭐ Admin</option>
+        <option value="usuario" ${u.tipo === 'usuario' ? 'selected' : ''}>👤 Usuário</option>
+        <option value="admin" ${u.tipo === 'admin' ? 'selected' : ''}>⭐ Admin</option>
       </select>
     </div>
     <div class="field"><label>Nova senha (deixe em branco para manter)</label>
@@ -1057,27 +1221,41 @@ function openGuestModal(userId) {
       <input type="password" id="gmGuestConf" placeholder="Repita a senha" autocomplete="new-password">
     </div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" type="button" onclick="closeGuestModal()">Cancelar</button>
-      <button class="btn btn-primary" id="btnSaveGuest" type="button" onclick="admSaveGuest()">💾 Salvar</button>
+      <button class="btn btn-ghost" id="cancelGuestBtn">Cancelar</button>
+      <button class="btn btn-primary" id="saveGuestBtn">💾 Salvar</button>
     </div>`;
-  el$('modalGuest').classList.add('open');
+  
+  document.getElementById('cancelGuestBtn').onclick = () => closeGuestModal();
+  document.getElementById('saveGuestBtn').onclick = admSaveGuest;
+  
+  modal.classList.add('open');
 }
 
 async function admSaveGuest() {
-  const userId = val('gmUserId');
-  const nome   = val('gmGuestName');
-  const tel    = val('gmGuestTel');
-  const tipo   = val('gmGuestType');
-  const pass   = val('gmGuestPass');
-  const conf   = val('gmGuestConf');
+  const userId = document.getElementById('gmUserId').value;
+  const nome = document.getElementById('gmGuestName').value.trim();
+  const tel = document.getElementById('gmGuestTel').value.trim();
+  const tipo = document.getElementById('gmGuestType').value;
+  const pass = document.getElementById('gmGuestPass').value;
+  const conf = document.getElementById('gmGuestConf').value;
 
-  if (!nome) { toast('Nome é obrigatório.', 'error'); return; }
+  if (!nome) {
+    toast('Nome é obrigatório.', 'error');
+    return;
+  }
   if (pass) {
-    if (pass.length < 6) { toast('Senha mínima 6 caracteres.', 'error'); return; }
-    if (pass !== conf)   { toast('As senhas não coincidem.', 'error'); return; }
+    if (pass.length < 6) {
+      toast('Senha mínima 6 caracteres.', 'error');
+      return;
+    }
+    if (pass !== conf) {
+      toast('As senhas não coincidem.', 'error');
+      return;
+    }
   }
 
-  setBtn('btnSaveGuest', true, 'Salvando...');
+  const saveBtn = document.getElementById('saveGuestBtn');
+  setBtn('saveGuestBtn', true, 'Salvando...');
 
   const { error } = await sb.from('perfis').update({
     nome, telefone: tel || null, tipo, atualizado_em: new Date()
@@ -1085,7 +1263,7 @@ async function admSaveGuest() {
 
   if (error) {
     toast('Erro: ' + error.message, 'error');
-    setBtn('btnSaveGuest', false, '💾 Salvar');
+    setBtn('saveGuestBtn', false, '💾 Salvar');
     return;
   }
 
@@ -1099,11 +1277,13 @@ async function admSaveGuest() {
       });
       if (!res.ok) toast('Senha não alterada (Edge Function necessária).', 'error');
       else toast('Senha alterada! ✅', 'success');
-    } catch { toast('Senha não alterada (configure a Edge Function).', 'error'); }
+    } catch {
+      toast('Senha não alterada (configure a Edge Function).', 'error');
+    }
   }
 
-  setBtn('btnSaveGuest', false, '💾 Salvar');
-  toast('Convidado actualizado! ✅', 'success');
+  setBtn('saveGuestBtn', false, '💾 Salvar');
+  toast('Convidado atualizado! ✅', 'success');
   closeGuestModal();
   await admLoadAll();
   admRenderGuests();
@@ -1113,100 +1293,118 @@ async function admSaveGuest() {
 async function admDeleteGuest(userId, nome) {
   if (!confirm(`Remover "${nome}"?`)) return;
   const { error } = await sb.from('perfis').delete().eq('user_id', userId);
-  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  if (error) {
+    toast('Erro: ' + error.message, 'error');
+    return;
+  }
   toast('Convidado removido.', 'success');
   await admLoadAll();
   admRenderGuests();
   admRenderDashboard();
 }
 
-function closeGuestModal(e) {
-  if (e && e.type === 'click' && e.target !== el$('modalGuest')) return;
-  el$('modalGuest')?.classList.remove('open');
+function closeGuestModal() {
+  const modal = document.getElementById('modalGuest');
+  if (modal) modal.classList.remove('open');
 }
 
-// ── Config ───────────────────────────────────────────
 function admRenderConfig() {
   const c = adm.cfg;
-  [['cfgTitle','evento_titulo'],['cfgDate','evento_data'],['cfgLocal','evento_local'],
-   ['cfgDesc','evento_descricao'],['cfgPix','pix_chave'],['cfgPixName','pix_nome'],
-   ['cfgAdminEmail','admin_email']
-  ].forEach(([id, key]) => { const el = el$(id); if (el) el.value = c[key] || ''; });
+  const fields = {
+    cfgTitle: 'evento_titulo',
+    cfgDate: 'evento_data',
+    cfgLocal: 'evento_local',
+    cfgDesc: 'evento_descricao',
+    cfgPix: 'pix_chave',
+    cfgPixName: 'pix_nome',
+    cfgAdminEmail: 'admin_email'
+  };
+  for (const [id, key] of Object.entries(fields)) {
+    const el = document.getElementById(id);
+    if (el) el.value = c[key] || '';
+  }
 }
 
 async function admSaveConfig() {
   const pairs = [
-    ['evento_titulo',    val('cfgTitle')],
-    ['evento_data',      val('cfgDate')],
-    ['evento_local',     val('cfgLocal')],
-    ['evento_descricao', val('cfgDesc')],
-    ['pix_chave',        val('cfgPix')],
-    ['pix_nome',         val('cfgPixName')],
-    ['admin_email',      val('cfgAdminEmail')]
+    ['evento_titulo', document.getElementById('cfgTitle').value],
+    ['evento_data', document.getElementById('cfgDate').value],
+    ['evento_local', document.getElementById('cfgLocal').value],
+    ['evento_descricao', document.getElementById('cfgDesc').value],
+    ['pix_chave', document.getElementById('cfgPix').value],
+    ['pix_nome', document.getElementById('cfgPixName').value],
+    ['admin_email', document.getElementById('cfgAdminEmail').value]
   ];
+  
   setBtn('btnSaveCfg', true, 'Salvando...');
+  
   for (const [chave, valor] of pairs) {
     await sb.from('configuracoes').upsert({ chave, valor, atualizado_em: new Date() }, { onConflict: 'chave' });
   }
-  const coverFile = el$('cfgCover')?.files?.[0];
-  if (coverFile) {
-    const base64 = await toBase64(coverFile);
-    await sb.from('configuracoes').upsert({ chave: 'imagem_capa_base64', valor: base64, atualizado_em: new Date() }, { onConflict: 'chave' });
-  }
+  
   setBtn('btnSaveCfg', false, '💾 Salvar Configurações');
   toast('Configurações guardadas! ✅', 'success');
   await admLoadAll();
 }
 
-function backToSite() { window.location.hash = ''; commCache = {}; renderApp(); }
-
 // ===================================================
 // UTILITIES
 // ===================================================
 
-function el$(id) { return document.getElementById(id); }
-function val(id) { return el$(id)?.value?.trim() || ''; }
-function setText(id, v) { const el = el$(id); if (el) el.textContent = v; }
-function showAlert(el, msg) { if (!el) return; el.textContent = msg; el.classList.add('show'); }
+function setText(id, v) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = v;
+}
+
+function showAlert(el, msg) {
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+}
 
 function setBtn(id, loading, label) {
-  const btn = el$(id);
+  const btn = document.getElementById(id);
   if (!btn) return;
   btn.disabled = loading;
   btn.textContent = label;
 }
 
 function toast(msg, type = 'info') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
   const el = document.createElement('div');
   el.className = `toast ${type}`;
   el.textContent = msg;
-  document.getElementById('toast-container').appendChild(el);
+  container.appendChild(el);
   setTimeout(() => el.remove(), 4200);
 }
 
-function togglePass(inputId, btn) {
-  const input = el$(inputId);
+window.togglePass = function(inputId, btn) {
+  const input = document.getElementById(inputId);
   if (!input) return;
   input.type = input.type === 'password' ? 'text' : 'password';
   btn.textContent = input.type === 'password' ? '👁' : '🙈';
-}
+};
 
 function previewImg(input, prevId) {
   if (!input.files?.[0]) return;
-  const r = new FileReader();
-  r.onload = e => {
-    const el = el$(prevId);
-    if (el) { el.src = e.target.result; el.style.display = 'block'; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const el = document.getElementById(prevId);
+    if (el) {
+      el.src = e.target.result;
+      el.style.display = 'block';
+    }
   };
-  r.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(input.files[0]);
 }
 
 function toBase64(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload  = () => res(r.result);
-    r.onerror = rej;
-    r.readAsDataURL(file);
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
@@ -1219,14 +1417,18 @@ function fmtDate(d) {
 }
 
 function payLabel(t) {
-  return { presente: '🎁 Presente', pix: '💰 PIX', dinheiro: '💵 Dinheiro' }[t] || t || '—';
+  const labels = { presente: '🎁 Presente', pix: '💰 PIX', dinheiro: '💵 Dinheiro' };
+  return labels[t] || t || '—';
 }
 
 function esc(s) {
   if (!s) return '';
   return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function skeletons(n) {
