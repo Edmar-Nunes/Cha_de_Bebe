@@ -4,8 +4,8 @@
 // CONFIGURAÇÃO: Altere os valores abaixo com os dados
 // do SEU projeto no Supabase (Settings → API)
 // ===================================================
-const SB_URL = 'https://SEU_PROJECT_ID.supabase.co';
-const SB_KEY = 'SUA_ANON_KEY_AQUI';
+const SB_URL = 'https://eipozcduwvwznyvpawue.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpcG96Y2R1d3Z3em55dnBhd3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NTE2NjYsImV4cCI6MjA5MDMyNzY2Nn0.289rM7XDfxhYhQsI23iTCNz7JXKK5Oc3WyE2Whq4Ucc';
 
 // ── State ─────────────────────────────────────────────
 let sb        = null;
