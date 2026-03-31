@@ -1,21 +1,7 @@
-// ===================================================
-// CHÁ DE BEBÊ — app.js (versão otimizada)
-// Correções aplicadas:
-//  - Loop duplo no onAuthStateChange eliminado
-//  - Comentários buscados em batch único (sem N queries)
-//  - commCache invalidado por item, não globalmente
-//  - admLoadAll chamado apenas quando necessário por painel
-//  - Promise.allSettled no boot evita falha silenciosa
-//  - pixTimer com cleanup garantido no fechamento do modal
-//  - Splash com timeout de fallback (10s)
-//  - document.write removido do index.html → ícone via JS
-//  - Verificação de admin no servidor (RLS) + UI como complemento
-//  - Aviso de segurança na chave anon mantida (necessária no cliente)
-// ===================================================
+// CHÁ DE BEBÊ — app.js
 
 const SB_URL = 'https://eipozcduwvwznyvpawue.supabase.co';
-// ATENÇÃO: esta é a chave "anon" (pública). Proteja seus dados
-// configurando Row Level Security (RLS) no painel do Supabase.
+
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpcG96Y2R1d3Z3em55dnBhd3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NTE2NjYsImV4cCI6MjA5MDMyNzY2Nn0.289rM7XDfxhYhQsI23iTCNz7JXKK5Oc3WyE2Whq4Ucc';
 
 const IMG_MAX_BYTES = 800_000;
