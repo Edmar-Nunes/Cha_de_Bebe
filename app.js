@@ -1,49 +1,36 @@
-// CHÁ DE BEBÊ — app.js
-
 const SB_URL = 'https://eipozcduwvwznyvpawue.supabase.co';
 
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpcG96Y2R1d3Z3em55dnBhd3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NTE2NjYsImV4cCI6MjA5MDMyNzY2Nn0.289rM7XDfxhYhQsI23iTCNz7JXKK5Oc3WyE2Whq4Ucc';
 
 const IMG_MAX_BYTES = 800_000;
 
-// ── Estado global ──────────────────────────────────────
 let sb        = null;
 let me        = null;
 let gifts     = [];
 let myChoice  = null;
 let cfg       = {};
-let commCache = {}; // { [presente_id]: comentarios[] }
+let commCache = {};
 let adm       = { gifts: [], choices: [], users: [], pix: [], comments: [], cfg: {} };
 let pixTimer  = null;
 
-// Controla se o boot já tratou a sessão inicial
-// Evita o loop duplo: getSession() + onAuthStateChange('SIGNED_IN')
 let _sessionHandled = false;
 
-// ===================================================
-// BOOT
-// ===================================================
 (async function boot() {
   sb = window.supabase.createClient(SB_URL, SB_KEY, {
     auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: false }
   });
 
-  // Timeout de segurança: se o Supabase não responder em 10s,
-  // remove o splash e mostra o login para não deixar o site morto.
   const splashTimeout = setTimeout(() => {
     document.querySelector('.splash')?.remove();
     if (!me) renderLogin();
   }, 10_000);
 
-  // Aplica ícone salvo no localStorage antes mesmo do fetch
   const savedIcon = localStorage.getItem('icone_salvo');
   if (savedIcon) applyAppIcon(savedIcon);
 
-  // Busca ícone atualizado do banco (sem bloquear o boot)
   sb.from('configuracoes').select('valor').eq('chave', 'icone_app').single()
     .then(({ data }) => { if (data?.valor) applyAppIcon(data.valor); });
 
-  // ── Sessão inicial ────────────────────────────────
   const { data: { session }, error: sessErr } = await sb.auth.getSession();
   clearTimeout(splashTimeout);
 
@@ -63,15 +50,9 @@ let _sessionHandled = false;
     renderLogin();
   }
 
-  // ── Listener de auth ─────────────────────────────
-  // FIX CRÍTICO: o Supabase dispara SIGNED_IN tanto no login manual
-  // quanto ao restaurar sessão do localStorage. Com _sessionHandled
-  // garantimos que o boot inicial nunca processa o evento duas vezes.
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
-      // Ignora o disparo automático logo após getSession
       if (!_sessionHandled) return;
-      // Ignora se já está logado com o mesmo usuário e perfil carregado
       if (me?.id === session.user.id && me?.perfil) return;
       me = session.user;
       await loadProfile();
@@ -84,7 +65,6 @@ let _sessionHandled = false;
     }
   });
 
-  // ── Wake-up: Android Chrome suspende JS em background ─
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState !== 'visible' || !me) return;
     const { data: { session } } = await sb.auth.getSession();
@@ -104,7 +84,6 @@ function resetState() {
   _sessionHandled = false;
 }
 
-// Wrapper seguro para queries Supabase
 async function sbCall(fn) {
   try {
     return await fn();
@@ -113,9 +92,6 @@ async function sbCall(fn) {
   }
 }
 
-// ===================================================
-// ÍCONE DO APP
-// ===================================================
 function applyAppIcon(valor) {
   if (!valor) return;
   localStorage.setItem('icone_salvo', valor);
@@ -136,18 +112,12 @@ function applyAppIcon(valor) {
   });
 }
 
-// ===================================================
-// ROTEAMENTO
-// ===================================================
 function route() {
   if (window.location.hash === '#admin' && isAdmin()) renderAdmin();
   else renderApp();
 }
 window.addEventListener('hashchange', () => { if (me) route(); });
 
-// ===================================================
-// AUTH HELPERS
-// ===================================================
 function isAdmin() {
   return me?.user_metadata?.tipo === 'admin' || me?.perfil?.tipo === 'admin';
 }
@@ -199,9 +169,6 @@ function displayName() {
   return me?.perfil?.nome || me?.user_metadata?.nome || me?.email || '';
 }
 
-// ===================================================
-// TELA DE LOGIN
-// ===================================================
 function renderLogin() {
   document.querySelector('.splash')?.remove();
   window.location.hash = '';
@@ -274,7 +241,6 @@ function renderLogin() {
       </div>
     </div>`;
 
-  // Branding dinâmico — carrega sem bloquear o render
   sb.from('configuracoes').select('chave, valor').then(({ data }) => {
     if (!data) return;
     const c = Object.fromEntries(data.map(r => [r.chave, r.valor]));
@@ -333,9 +299,6 @@ async function onSignup() {
   else showAlert(errEl, msg);
 }
 
-// ===================================================
-// TELA DO APP (CONVIDADO)
-// ===================================================
 async function renderApp() {
   document.querySelector('.splash')?.remove();
   window.location.hash = '';
@@ -398,7 +361,6 @@ async function renderApp() {
        <button class="btn-outline" onclick="doLogout().then(()=>renderLogin())">Sair</button>`
     : `<button class="btn-outline" onclick="doLogout().then(()=>renderLogin())">Sair</button>`;
 
-  // FIX: Promise.allSettled garante que uma falha não anula as outras
   const [cfgRes, giftsRes, choiceRes] = await Promise.allSettled([
     sbCall(() => sb.from('configuracoes').select('chave, valor')),
     sbCall(() => sb.from('presentes').select('*').eq('status', 'ativo').order('ordem')),
@@ -450,9 +412,6 @@ async function renderApp() {
   await renderGrid();
 }
 
-// ===================================================
-// GRID DE PRESENTES
-// ===================================================
 async function renderGrid() {
   const grid = el$('giftsGrid');
   if (!grid) return;
@@ -465,12 +424,9 @@ async function renderGrid() {
     return;
   }
 
-  // FIX CRÍTICO: uma única query batch para TODOS os comentários
-  // Antes: N queries (uma por presente). Agora: 1 query total.
   const presentIds = gifts.map(g => g.id);
   let commMap = {};
 
-  // Usa cache para presentes que já foram buscados
   const needFetch = presentIds.filter(id => !commCache[id]);
 
   if (needFetch.length > 0) {
@@ -481,13 +437,11 @@ async function renderGrid() {
       .order('criado_em');
 
     if (!error && allComments) {
-      // Agrupa por presente_id e popula cache
       allComments.forEach(c => {
         if (!commCache[c.presente_id]) commCache[c.presente_id] = [];
         commCache[c.presente_id].push(c);
       });
     }
-    // Garante que presentes sem comentários também entram no cache
     needFetch.forEach(id => { if (!commCache[id]) commCache[id] = []; });
   }
 
@@ -631,7 +585,6 @@ async function submitComment(pid, text) {
   }));
   if (error) { toast('Erro ao enviar comentário.', 'error'); return; }
 
-  // FIX: invalida apenas o cache do presente afetado, não tudo
   delete commCache[pid];
 
   const wasOpen = el$('cb-' + pid)?.classList.contains('open');
@@ -646,7 +599,6 @@ async function toggleReaction(cid, emoji) {
   if (data) await sb.from('reacoes').delete().eq('id', data.id);
   else      await sb.from('reacoes').insert({ comentario_id: cid, usuario_id: me.id, emoji });
 
-  // FIX: invalida apenas o cache do presente pai do comentário
   const pidToInvalidate = data?.comentarios?.presente_id
     ?? Object.keys(commCache).find(pid =>
         commCache[pid]?.some(c => c.id === cid)
@@ -658,9 +610,6 @@ async function toggleReaction(cid, emoji) {
   abertos.forEach(id => el$(id)?.classList.add('open'));
 }
 
-// ===================================================
-// MODAL DE ESCOLHA
-// ===================================================
 function openChoiceModal(gid, title, price) {
   el$('modalTitle').textContent = title;
   el$('modalSub').textContent   = 'Confirme sua escolha';
@@ -707,7 +656,6 @@ async function confirmChoice(gid, tipo, valor, mensagem) {
   closeModal();
   toast('Presente escolhido com sucesso! 🎉', 'success');
 
-  // Atualiza estado local sem recarregar tudo
   const [gr, cr] = await Promise.allSettled([
     sb.from('presentes').select('*').eq('status', 'ativo').order('ordem'),
     sb.from('escolhas').select('*, presentes(titulo)').eq('usuario_id', me.id).maybeSingle()
@@ -723,9 +671,6 @@ function closeModal(e) {
   el$('modalOverlay')?.classList.remove('open');
 }
 
-// ===================================================
-// MODAL PIX
-// ===================================================
 function buildPixPayload(basePayload, amount) {
   let payload = basePayload.replace(/6304.{4}$/, '').replace(/54\d{2}\d+(\.\d+)?/, '');
   if (amount) {
@@ -749,7 +694,6 @@ function crc16(str) {
 function openPixModal() {
   if (!cfg.pix_chave) { toast('Chave PIX não configurada.', 'error'); return; }
 
-  // FIX: limpa timer anterior ao abrir novo modal
   clearInterval(pixTimer);
 
   el$('pixModalBody').innerHTML = `
@@ -859,7 +803,6 @@ async function gerarQrCode() {
 }
 
 function startPixTimer() {
-  // FIX: limpa qualquer timer residual antes de criar um novo
   clearInterval(pixTimer);
   let secs = 1800;
   const tick = () => {
@@ -907,15 +850,11 @@ function fallbackCopy(text, onSuccess) {
 
 function closePixModal(e) {
   if (e && e.type === 'click' && e.target !== el$('modalPix')) return;
-  // FIX: garante limpeza do timer ao fechar o modal
   clearInterval(pixTimer);
   pixTimer = null;
   el$('modalPix')?.classList.remove('open');
 }
 
-// ===================================================
-// TELA DE ADMIN
-// ===================================================
 function goAdmin() { window.location.hash = '#admin'; renderAdmin(); }
 
 async function renderAdmin() {
@@ -1174,23 +1113,16 @@ async function renderAdmin() {
   window.admRemoveIcon  = admRemoveIcon;
   window.admRemoveCover = admRemoveCover;
 
-  // FIX: carrega dados de forma lazy — apenas o painel ativo (dashboard)
   await admLoadPanel('dashboard');
   admRenderDashboard();
   if (adm.cfg.icone_app) applyAppIcon(adm.cfg.icone_app);
 }
 
-// ===================================================
-// ADMIN: CARGA LAZY POR PAINEL
-// ===================================================
-// FIX CRÍTICO: ao invés de carregar TUDO de uma vez ao entrar no admin,
-// cada painel carrega apenas os dados que precisa, só quando é aberto.
 const _admPanelLoaded = {};
 
 async function admLoadPanel(panel) {
   switch (panel) {
     case 'dashboard':
-      // Dashboard precisa de choices, users e pix para calcular totais
       await Promise.allSettled([
         _admFetchChoices(),
         _admFetchUsers(),
@@ -1263,7 +1195,6 @@ function admShowPanel(id, btn) {
   el$('adminSidebar')?.classList.remove('open');
   el$('sidebarOverlay')?.classList.remove('active');
 
-  // Carrega dados do painel ao abrir (lazy loading)
   admLoadPanel(id).then(() => {
     switch (id) {
       case 'dashboard':    admRenderDashboard();    break;
@@ -1282,7 +1213,6 @@ function toggleSidebar() {
   el$('sidebarOverlay')?.classList.toggle('active');
 }
 
-// ── Dashboard ─────────────────────────────────────────
 function admRenderDashboard() {
   const totalValue = adm.choices.reduce((s, c) => s + (c.presentes?.preco || 0), 0);
   const totalPix   = adm.pix.reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
@@ -1317,7 +1247,6 @@ function admRenderDashboard() {
   }).join('');
 }
 
-// ── Presentes admin ───────────────────────────────────
 function admRenderGifts() {
   const grid = el$('admGiftsGrid');
   if (!grid) return;
@@ -1362,7 +1291,6 @@ function admRenderGifts() {
   });
 }
 
-// ── Formulário de presente ─────────────────────────────
 function openGiftForm(g = null) {
   const editing = !!g;
   setTextIfEl('giftModalTitle', editing ? '✏️ Editar Presente' : '➕ Novo Presente');
@@ -1478,7 +1406,6 @@ async function admSaveGift() {
   if (error) { toast('Erro: ' + error.message, 'error'); return; }
   toast(id ? 'Presente atualizado! ✅' : 'Presente adicionado! ✅', 'success');
   closeGiftModal();
-  // FIX: recarrega apenas os dados necessários, não tudo
   await _admFetchGifts();
   admRenderGifts();
   admRenderDashboard();
@@ -1499,7 +1426,6 @@ function closeGiftModal(e) {
   el$('modalGift')?.classList.remove('open');
 }
 
-// ── Escolhas ──────────────────────────────────────────
 function admRenderChoices() {
   const tbody = document.querySelector('#tChoices tbody');
   if (!tbody) return;
@@ -1543,7 +1469,6 @@ async function admChoiceDelete(id, nome) {
   admRenderDashboard();
 }
 
-// ── PIX ───────────────────────────────────────────────
 function admRenderPixContribs() {
   const tbody = document.querySelector('#tPix tbody');
   if (!tbody) return;
@@ -1588,7 +1513,6 @@ async function admPixDelete(id) {
   admRenderDashboard();
 }
 
-// ── Convidados ────────────────────────────────────────
 function admRenderGuests() {
   const tbody = document.querySelector('#tGuests tbody');
   if (!tbody) return;
@@ -1707,7 +1631,6 @@ function closeGuestModal(e) {
   el$('modalGuest')?.classList.remove('open');
 }
 
-// ── Configurações ─────────────────────────────────────
 function admRenderConfig() {
   const c = adm.cfg;
   [
@@ -1822,7 +1745,6 @@ async function admRemoveCover() {
   toast('Imagem de capa removida.', 'success');
 }
 
-// ── Comentários ───────────────────────────────────────
 function admRenderComments() {
   const tbody = document.querySelector('#tComments tbody');
   if (!tbody) return;
@@ -1851,7 +1773,6 @@ async function admDeleteComment(id) {
   if (!confirm('Excluir este comentário permanentemente?')) return;
   const { error } = await sb.from('comentarios').delete().eq('id', id);
   if (error) { toast('Erro: ' + error.message, 'error'); return; }
-  // FIX: invalida apenas o comentário do cache, não tudo
   const pidToInvalidate = Object.keys(commCache).find(pid =>
     commCache[pid]?.some(c => c.id === id)
   );
@@ -1875,9 +1796,6 @@ async function admDeleteAllComments() {
 
 function backToSite() { window.location.hash = ''; commCache = {}; renderApp(); }
 
-// ===================================================
-// UTILITÁRIOS
-// ===================================================
 const el$         = id  => document.getElementById(id);
 const val         = id  => el$(id)?.value?.trim() || '';
 const setTextIfEl = (id, v) => { const e = el$(id); if (e) e.textContent = v; };
