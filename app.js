@@ -1530,7 +1530,7 @@ function admRenderGuests() {
       <td><strong>${esc(u.nome || '—')}</strong></td>
       <td style="color:var(--muted)">${esc(u.email || '—')}</td>
       <td style="color:var(--muted)">${esc(u.telefone || '—')}</td>
-      <td><span class="badge badge-${u.tipo}">${u.tipo === 'admin' ? '⭐ Admin não Remover⚠️🚫: '👤 Usuário'}</span></td>
+      <td><span class="badge badge-${u.tipo}">${u.tipo === 'admin' ? '⭐ Admin não Remover⚠️🚫': '👤 Usuário'}</span></td>
       <td>${choice ? esc(choice.presentes?.titulo || '—') : '<span style="color:var(--muted)">—</span>'}</td>
       <td style="color:var(--muted)">${fmtDate(u.criado_em)}</td>
       <td><div class="table-actions">
