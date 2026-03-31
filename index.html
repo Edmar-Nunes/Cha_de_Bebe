@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>💖 Convite ✨🎀</title>
+  <meta name="description" content="Lista de presentes 🎁">
+
+  <!--
+    SEGURANÇA — Supabase Row Level Security (RLS)
+    A chave "anon" abaixo é pública por design (client-side).
+    Para proteger seus dados, certifique-se de que as políticas RLS
+    estão ativas nas tabelas: presentes, perfis, escolhas, comentarios,
+    reacoes, configuracoes, contribuicoes_pix.
+    Sem RLS qualquer pessoa com a chave pode ler/gravar dados.
+    Documentação: https://supabase.com/docs/guides/auth/row-level-security
+  -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <div class="splash">
+      <div class="splash-inner">
+        <!--
+          FIX: document.write removido.
+          O ícone é injetado via JS (applyAppIcon) no boot,
+          usando localStorage de forma segura e sem bloquear o parser HTML.
+        -->
+        <div class="splash-icon" id="splashIcon">🍼</div>
+      </div>
+    </div>
+  </div>
+  <div id="toast-container"></div>
+  <script src="app.js"></script>
+</body>
+</html>
